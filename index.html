@@ -1,33 +1,466 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"
-      integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA=="
-      crossorigin="anonymous"
-    />
-    <link rel="stylesheet" href="style.css" />
-    <title>Scroll Animation</title>
-  </head>
-  <body>
-    <h1>Scroll to see the animation</h1>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
-    <div class="box"><h2>Content</h2></div>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hokkaidó v září — interaktivní itinerář</title>
+<meta name="description" content="18denní cestovní itinerář po Hokkaidó na začátek září: reálná mapa, fotky míst, aktivity a restaurace zastávka po zastávce." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+  :root{
+    --ink:#15130f; --ink-2:#3b372f; --paper:#f7f4ef; --paper-2:#efeae1;
+    --muted:#8c8475; --line:#e4ddd0; --hair:#d8d0c1;
+    --vermilion:#c5402a; --vermilion-d:#9c2f1d; --pine:#3a5a45;
+    /* tlumené kategorie */
+    --c-nature:#3a7d52; --c-view:#7a4b8c; --c-onsen:#b5642a;
+    --c-city:#2a5b82; --c-culture:#9c8410; --c-food:#c5402a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Inter","Helvetica Neue",Arial,sans-serif;
+    background:var(--paper);color:var(--ink);
+    -webkit-font-smoothing:antialiased;line-height:1.6;
+    overflow-x:hidden;
+  }
+  .serif{font-family:"Shippori Mincho",Georgia,serif}
+  .wrap{max-width:1280px;margin:0 auto;padding:0 clamp(22px,5vw,64px)}
+  a{color:inherit}
+  ::selection{background:var(--vermilion);color:#fff}
 
-    <script src="script.js"></script>
-  </body>
+  /* ---------- reveal ---------- */
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity 1s cubic-bezier(.2,.7,.2,1),transform 1s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- HERO ---------- */
+  .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative;padding:120px 0 80px}
+  .hero .vkanji{
+    position:absolute;top:8%;right:clamp(18px,5vw,64px);
+    writing-mode:vertical-rl;font-family:"Shippori Mincho",serif;
+    font-size:clamp(22px,3vw,34px);letter-spacing:.5em;color:var(--pine);opacity:.85;
+  }
+  .kicker{font-size:11px;letter-spacing:.36em;text-transform:uppercase;color:var(--vermilion);font-weight:600;margin-bottom:30px}
+  .kicker::before{content:"";display:inline-block;width:34px;height:1px;background:var(--vermilion);vertical-align:middle;margin-right:14px;transform:translateY(-2px)}
+  h1.title{font-family:"Shippori Mincho",serif;font-weight:600;font-size:clamp(56px,13vw,168px);line-height:.92;letter-spacing:-.01em}
+  h1.title .nine{color:var(--vermilion);font-style:italic;font-weight:500}
+  .hero .lede{font-size:clamp(14px,1.5vw,17px);font-weight:300;color:var(--ink-2);max-width:540px;margin-top:38px;line-height:1.7}
+  .hero .meta{display:flex;gap:42px;margin-top:54px;flex-wrap:wrap}
+  .hero .meta .m b{font-family:"Shippori Mincho",serif;display:block;font-size:30px;font-weight:600;line-height:1}
+  .hero .meta .m span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:8px;display:block}
+  .scrollcue{position:absolute;bottom:34px;left:clamp(22px,5vw,64px);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:12px}
+  .scrollcue .ln{width:1px;height:46px;background:var(--hair);position:relative;overflow:hidden}
+  .scrollcue .ln::after{content:"";position:absolute;top:-46px;left:0;width:1px;height:46px;background:var(--vermilion);animation:drop 2.4s infinite}
+  @keyframes drop{0%{top:-46px}60%,100%{top:46px}}
+
+  /* ---------- SEASON ---------- */
+  .section-tag{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--vermilion);font-weight:600;margin-bottom:18px;display:flex;align-items:center;gap:12px}
+  .section-tag .jp{color:var(--pine);letter-spacing:.2em}
+  .season{padding:clamp(80px,12vh,150px) 0;border-top:1px solid var(--hair)}
+  .season h2{font-family:"Shippori Mincho",serif;font-size:clamp(28px,4.5vw,52px);font-weight:600;line-height:1.1;max-width:760px;margin-bottom:64px}
+  .season .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair)}
+  .season .item{background:var(--paper);padding:34px 30px}
+  .season .item b{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--vermilion);margin-bottom:14px;font-weight:600}
+  .season .item p{font-size:14px;font-weight:300;color:var(--ink-2);line-height:1.65}
+
+  /* ---------- ITINERARY (sticky map + days) ---------- */
+  .itin{border-top:1px solid var(--hair)}
+  .itin .head{padding:clamp(70px,10vh,120px) 0 50px}
+  .itin .head h2{font-family:"Shippori Mincho",serif;font-size:clamp(30px,5vw,60px);font-weight:600;line-height:1.05;max-width:780px}
+  .itin .head p{font-size:15px;font-weight:300;color:var(--ink-2);max-width:560px;margin-top:22px}
+
+  .split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(28px,4vw,64px);align-items:start}
+
+  .map-col{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:24px 0}
+  .map-shell{flex:1;position:relative;border:1px solid var(--hair);border-radius:4px;overflow:hidden;background:#aacfe6}
+  #map{position:absolute;inset:0;width:100%;height:100%}
+  .leaflet-container{font-family:"Inter",sans-serif;background:#aacfe6}
+  .map-bar{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+  .btn{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--ink);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:2px;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+  .btn:hover{background:var(--vermilion);border-color:var(--vermilion)}
+  .btn.ghost{background:transparent;color:var(--ink)}
+  .btn.ghost:hover{background:var(--ink);color:var(--paper)}
+  .legend{display:flex;flex-wrap:wrap;gap:9px 18px;margin-left:auto}
+  .lg{font-size:10.5px;letter-spacing:.04em;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+  .lg .sw{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+  .progress{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(21,19,15,.93);color:var(--paper);padding:10px 20px;border-radius:30px;z-index:600;font-size:11px;letter-spacing:.04em;display:flex;align-items:center;gap:14px;box-shadow:0 6px 22px rgba(0,0,0,.28);opacity:0;transition:opacity .35s;pointer-events:none}
+  .progress.show{opacity:1}
+  .pbar{width:120px;height:2px;background:rgba(255,255,255,.22);border-radius:2px;overflow:hidden}
+  .pfill{height:100%;width:0;background:var(--vermilion);transition:width .45s ease}
+
+  /* day cards */
+  .days{padding:24px 0 clamp(40px,8vh,110px)}
+  .day{border-top:1px solid var(--hair);padding:40px 0;cursor:pointer;position:relative;transition:opacity .4s}
+  .day:last-child{border-bottom:1px solid var(--hair)}
+  .day .num{font-family:"Shippori Mincho",serif;font-size:13px;font-weight:600;color:var(--vermilion);letter-spacing:.1em}
+  .day .toprow{display:flex;align-items:baseline;gap:16px;margin:10px 0 4px}
+  .day h3{font-family:"Shippori Mincho",serif;font-size:clamp(26px,3.2vw,40px);font-weight:600;line-height:1.05;transition:color .2s}
+  .day:hover h3{color:var(--vermilion-d)}
+  .day .jp{font-family:"Shippori Mincho",serif;font-size:15px;color:var(--pine);letter-spacing:.22em;margin-left:auto;white-space:nowrap}
+  .day .tag{font-size:11px;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;margin-bottom:22px}
+  .day .photo{aspect-ratio:16/9;width:100%;border-radius:3px;background-size:cover;background-position:center;background-color:var(--paper-2);position:relative;filter:saturate(.96)}
+  .day .photo .cat{position:absolute;left:12px;top:12px;font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#fff;padding:5px 11px;border-radius:30px;backdrop-filter:saturate(1.4)}
+  .day .blurb{font-size:14.5px;font-weight:300;color:var(--ink-2);line-height:1.7;margin-top:22px;max-width:560px}
+  .day .expand-cue{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--vermilion);margin-top:20px;display:inline-flex;align-items:center;gap:9px}
+  .day .expand-cue .pl{width:16px;height:16px;border:1px solid var(--vermilion);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;transition:transform .3s}
+  .day.open .expand-cue .pl{transform:rotate(45deg)}
+
+  .body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s cubic-bezier(.2,.7,.2,1);overflow:hidden}
+  .day.open .body{grid-template-rows:1fr}
+  .body-inner{overflow:hidden;min-height:0}
+  .groups{padding-top:30px;display:grid;gap:26px}
+  .grp .glabel{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:9px}
+  .grp .glabel::before{content:"";width:16px;height:1.5px;background:currentColor}
+  .grp.nature .glabel{color:var(--c-nature)} .grp.view .glabel{color:var(--c-view)}
+  .grp.onsen .glabel{color:var(--c-onsen)} .grp.city .glabel{color:var(--c-city)}
+  .grp.culture .glabel{color:var(--c-culture)} .grp.food .glabel{color:var(--c-food)}
+  .grp ul{list-style:none}
+  .grp li{font-size:13.5px;font-weight:300;color:var(--ink-2);padding:6px 0 6px 16px;position:relative;line-height:1.6}
+  .grp li::before{content:"";position:absolute;left:0;top:13px;width:5px;height:5px;border-radius:50%;background:var(--hair)}
+  .grp li b{font-weight:500;color:var(--ink)}
+  .grp li .jpn{color:var(--pine);font-size:11px;letter-spacing:.06em}
+  .grp li a{color:var(--ink);font-weight:500;text-decoration:none;border-bottom:1px solid var(--hair);transition:border-color .2s,color .2s}
+  .grp li a:hover{color:var(--vermilion);border-color:var(--vermilion)}
+  .grp .note{font-size:12px;font-style:italic;color:var(--muted);margin-top:10px;padding-left:16px;line-height:1.6}
+
+  /* leaflet pins & popup */
+  .pin{position:relative;transition:transform .15s}
+  .pin svg{display:block;filter:drop-shadow(0 3px 4px rgba(0,0,0,.38))}
+  .pin .lbl{position:absolute;top:5px;left:0;width:100%;text-align:center;color:#fff;font-weight:600;font-size:12px}
+  .pin.cur{transform:scale(1.3);z-index:1000}
+  .pin.dim{opacity:.45}
+  .leaflet-popup-content-wrapper{border-radius:5px;box-shadow:0 10px 32px rgba(0,0,0,.3);padding:0;overflow:hidden}
+  .leaflet-popup-content{margin:0;width:248px!important}
+  .leaflet-popup-tip{box-shadow:0 6px 16px rgba(0,0,0,.18)}
+  .pop .pimg{height:124px;background-size:cover;background-position:center;background-color:#ded5c3;position:relative}
+  .pop .pcat{position:absolute;top:9px;left:9px;font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#fff;padding:3px 9px;border-radius:20px}
+  .pop .pbody{padding:13px 15px 15px}
+  .pop .pjp{font-size:10px;color:var(--pine);letter-spacing:.16em;margin-bottom:3px}
+  .pop h3{font-family:"Shippori Mincho",serif;font-size:18px;font-weight:600;margin-bottom:7px;color:var(--ink)}
+  .pop p{font-size:11.5px;font-weight:300;color:var(--ink-2);line-height:1.55;margin-bottom:11px}
+  .pop .pmore{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--vermilion);cursor:pointer;display:inline-block}
+  .pop .pmore:hover{text-decoration:underline}
+
+  /* ---------- FOOTER ---------- */
+  footer{border-top:1px solid var(--hair);padding:clamp(70px,10vh,120px) 0 90px}
+  footer .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
+  footer .pr b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--vermilion);margin-bottom:12px}
+  footer .pr p{font-size:13.5px;font-weight:300;color:var(--ink-2);line-height:1.7}
+  footer .sig{font-family:"Shippori Mincho",serif;text-align:center;margin-top:80px;font-size:clamp(22px,4vw,38px);color:var(--vermilion);letter-spacing:.1em}
+  footer .sig small{display:block;font-family:"Inter";font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-top:18px}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:900px){
+    .split{grid-template-columns:1fr;gap:0}
+    .map-col{position:sticky;top:0;height:52vh;z-index:500;padding:12px 0;background:var(--paper)}
+    .legend{display:none}
+    .map-bar{gap:10px}
+    .days{padding-top:8px}
+    .day .jp{display:none}
+  }
+  @media (max-width:560px){
+    .season .grid{grid-template-columns:1fr}
+    footer .grid{grid-template-columns:1fr}
+    .hero .vkanji{font-size:18px;opacity:.6}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *{transition:none!important;animation:none!important}
+    .reveal{opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== HERO ========== -->
+<header class="hero">
+  <div class="vkanji">九月の北海道</div>
+  <div class="wrap">
+    <div class="kicker reveal in">Sezónní průvodce · začátek září</div>
+    <h1 class="title reveal in">Hokkaidó<br><span class="nine">v září</span></h1>
+    <p class="lede reveal in">Pozdní léto přechází do raného podzimu. Asahidake se barví jako úplně první místo v Japonsku, je po letní špičce, mírné počasí a jídelní sezona je na vrcholu — losos, saury, krab. Velký okruh ostrova od jihu po nejsevernější bod Japonska.</p>
+    <div class="meta reveal in">
+      <div class="m"><b>18</b><span>dní</span></div>
+      <div class="m"><b>11</b><span>zastávek</span></div>
+      <div class="m"><b>九月</b><span>září</span></div>
+    </div>
+  </div>
+  <div class="scrollcue"><span class="ln"></span>Scrolluj</div>
+</header>
+
+<!-- ========== SEASON ========== -->
+<section class="season">
+  <div class="wrap">
+    <div class="section-tag reveal">Co dělá začátek září jiným <span class="jp">九月</span></div>
+    <h2 class="serif reveal">Jediné okno v roce, kdy se na vrcholcích barví listí proti prvnímu sněhu.</h2>
+    <div class="grid reveal">
+      <div class="item"><b>Počasí</b><p>Dny 20–25 °C, příjemné. Ke konci měsíce chladne pod 20. Velký rozdíl den/noc, ve výškách mrzne. Vrstvení nutné.</p></div>
+      <div class="item"><b>Barvy listí</b><p>Asahidake &amp; Daisecuzan — první kórjó v celém Japonsku, kolem 15. září od vrcholků dolů. Nížiny a města až v říjnu.</p></div>
+      <div class="item"><b>Sklizeň</b><p>Konec září: nová rýže (šinmai), zlaté klasy. Sezona ovoce — jablka, hrozny, švestky.</p></div>
+      <div class="item"><b>Moře</b><p>Vrchol sezony: podzimní losos (aki-zake) a ikura, saury (sanma) nejtučnější, krab. Korálová tráva u Abaširi rudne koncem září.</p></div>
+      <div class="item"><b>Davy &amp; ceny</b><p>Klidnější než léto i než říjnová špička. Japonské školy začaly, ubylo domácích turistů. Nižší ceny než v létě.</p></div>
+      <div class="item"><b>Sbal</b><p>Bunda nutná, ke konci měsíce i kabát. Na Asahidake teplé vrstvy — nahoře může být první sníh.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== ITINERARY ========== -->
+<section class="itin">
+  <div class="wrap">
+    <div class="head reveal">
+      <div class="section-tag">Trasa &amp; mapa <span class="jp">行程</span></div>
+      <h2 class="serif">Zastávka po zastávce, od Hakodate po nejsevernější mys.</h2>
+      <p>Klikni na bod v mapě nebo na den — rozbalí se foto, aktivity, zajímavosti a restaurace pro září. „Přehrát trasu" tě provede celým okruhem.</p>
+    </div>
+    <div class="split">
+      <!-- left: sticky map -->
+      <div class="map-col">
+        <div class="map-bar">
+          <button class="btn" id="play">▶ Přehrát trasu</button>
+          <button class="btn ghost" id="reset">Reset</button>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="map-shell">
+          <div id="map"></div>
+          <div class="progress" id="prog"><span id="progtxt">Den 1</span><div class="pbar"><div class="pfill" id="pfill"></div></div></div>
+        </div>
+      </div>
+      <!-- right: day cards -->
+      <div class="days" id="days"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer>
+  <div class="wrap">
+    <div class="section-tag reveal">Praktické na září <span class="jp">心得</span></div>
+    <div class="grid reveal">
+      <div class="pr"><b>Rezervace</b><p>Onsen ryokany rezervuj ~3 měsíce dopředu — Širetoko (Utoro) a Sounkjó se plní rychle, míst je málo.</p></div>
+      <div class="pr"><b>Auto &amp; cesta</b><p>Natankuj plnou nádrž před vjezdem do východního Hokkaidó — pumpy jsou tam řidší. Po setmění nejezdi (jeleni na silnici).</p></div>
+      <div class="pr"><b>Mapy &amp; signál</b><p>Stáhni offline mapy: signál v Širetoku a v horách je slabý. Měj rezervní den na počasí (mlha umí výhled schovat).</p></div>
+    </div>
+    <div class="sig">良い旅を<small>šťastnou cestu</small></div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+/* ---------- DATA (beze změny z reference) ---------- */
+const CAT={
+  nature:{c:"#3a7d52",i:"🌲",n:"Příroda"},view:{c:"#7a4b8c",i:"🌅",n:"Vyhlídka"},
+  onsen:{c:"#b5642a",i:"♨️",n:"Onsen"},city:{c:"#2a5b82",i:"🏙️",n:"Město"},
+  culture:{c:"#9c8410",i:"⛩️",n:"Kultura"},food:{c:"#c5402a",i:"🍴",n:"Jídlo"}
+};
+const PHOTOS={"1":"https://commons.wikimedia.org/wiki/Special:FilePath/Panoramic%20cityscape%20from%20Mt.%20Hakodate%2020060815-001.jpg?width=520","2":"https://commons.wikimedia.org/wiki/Special:FilePath/Lake%20Toya%20Nakajima.jpg?width=520","3":"https://commons.wikimedia.org/wiki/Special:FilePath/Sapporo%20Odori%20Park%202.jpg?width=520","4":"https://commons.wikimedia.org/wiki/Special:FilePath/Otaru%20Canal%20Night.jpg?width=520","5":"https://commons.wikimedia.org/wiki/Special:FilePath/Cape%20Soya%20monument.jpg?width=520","6":"https://commons.wikimedia.org/wiki/Special:FilePath/Asahidake%20from%20Sugatami.jpg?width=520","7":"https://commons.wikimedia.org/wiki/Special:FilePath/Aoiike.jpg?width=520","8":"https://commons.wikimedia.org/wiki/Special:FilePath/Abashiri%20Prison%20Museum%202014.jpg?width=520","9":"https://commons.wikimedia.org/wiki/Special:FilePath/Shiretoko%20Goko%20Lake.jpg?width=520","10":"https://commons.wikimedia.org/wiki/Special:FilePath/Lake%20Mashu%20%282%29.jpg?width=520","11":"https://commons.wikimedia.org/wiki/Special:FilePath/Kushiro%20Shitsugen.jpg?width=520"};
+
+const DATA=[
+ {n:1,d:"Den 1–2",loc:"Hakodate",jp:"函館",cat:"city",lat:41.7609,lng:140.7142,
+  tag:"Jih · vstupní bod · pozdně letní podvečery",blurb:"Vstupní bod z jihu. Noční panorama z hory, ranní rybí trh, hvězdicová pevnost Gorjókaku.",
+  groups:[
+   {cat:"view",items:[["Noční panorama z hory Hakodate","函館山","Jeden ze tří nejhezčích nočních výhledů Japonska. V září se stmívá ~18:00.","https://maps.google.com/?q=Mount+Hakodate+Ropeway"],["Pevnost a věž Gorjókaku","五稜郭","Z výšky vidíš dokonalý tvar hvězdy.","https://maps.google.com/?q=Goryokaku+Tower"]]},
+   {cat:"culture",items:[["Čtvrť Motomači","元町","Svahy s evropskou architekturou, kostely, dlážděné uličky.",""]]},
+   {cat:"food",items:[["Ranní rybí trh","朝市","Vlastní oliheň, chlupatý krab. Otevírá 5–6 h, ber hotovost.","https://maps.google.com/?q=Hakodate+Morning+Market"],["Hakodate Uni Murakami","","Mořský ježek bez aditiv.",""],["Hakodate ramen (šio)","","Slaný čirý vývar, lehčí než miso.",""]],note:"Podzimní losos a ikura právě dorazily — září je vrchol."}]},
+ {n:2,d:"Den 3",loc:"Tója → Noboribecu",jp:"洞爺・登別",cat:"onsen",lat:42.4976,lng:141.1486,
+  tag:"Jihozápad · onseny · sopečná krajina",blurb:"Kalderové jezero Tója, onseny v Noboribecu, sopečná Džigokudani.",
+  groups:[
+   {cat:"nature",items:[["Jezero Tója","洞爺湖","Loď kolem ostrůvku, výhled z hory Usu.","https://maps.google.com/?q=Lake+Toya"],["Džigokudani (Pekelné údolí)","地獄谷","Sirné páry, vroucí prameny, nožní lázeň Ojunuma.","https://maps.google.com/?q=Noboribetsu+Jigokudani"]]},
+   {cat:"onsen",items:[["Onsen Noboribecu","登別温泉","Jedno z nejslavnějších lázeňských měst Hokkaidó.",""]]},
+   {cat:"food",items:[["Kaiseki v ryokanu","","Sezónní suroviny, v ceně noclehu.",""],["Jingisukan","","Grilované jehněčí do chladného večera.",""]]}]},
+ {n:3,d:"Den 4–5",loc:"Sapporo",jp:"札幌",cat:"city",lat:43.0607,lng:141.3544,
+  tag:"Západ · hlavní město · jídelní metropole",blurb:"Park Ódori, noční Moiwa, a hlavně jídlo — sapporská velká pětka.",
+  groups:[
+   {cat:"city",items:[["Park Ódori & hodinová věž","大通公園","V září zeleň, koncem měsíce první barvy.","https://maps.google.com/?q=Odori+Park+Sapporo"],["Pasáž Tanukikódži","狸小路","Krytá nákupní ulice, jídlo, suvenýry.",""]]},
+   {cat:"view",items:[["Noční výhled z hory Moiwa","藻岩山","Jedno z nových tří velkých nočních panoramat.",""],["Ginkgová alej univerzity","北大","380 m zlatých stromů (vrchol konec října).",""],["Jozankei","定山渓","1 h busem — barvy koncem září, visuté mosty.",""]]},
+   {cat:"food",items:[["Miso ramen — Aji no Sanpei / Sumire","","Rodiště miso ramenu.",""],["Soup curry — GARAKU","","Sapporský originál, řidší kari.",""],["Kaisendon — trh Nidžó","二条市場","Čerstvý úlovek, chlupatý krab v sezoně.","https://maps.google.com/?q=Nijo+Market+Sapporo"],["Šime parfait — Parfaiteria Mill","","Sladká tečka po nočním pití.",""]],note:"Zangi = hokkaidské smažené kuře. Omijage: Royce, Široi Koibito, LeTAO."}]},
+ {n:4,d:"Den 6",loc:"Otaru + Cape Kamui",jp:"小樽・神威岬",cat:"nature",lat:43.3343,lng:140.3463,
+  tag:"Západní pobřeží · kanál · šakotanská modř",blurb:"Historický kanál a útesy Cape Kamui s nejčistší mořskou barvou Japonska.",
+  groups:[
+   {cat:"city",items:[["Kanál Otaru","小樽運河","Kamenné sklady, sklářské dílny. Nejhezčí za soumraku.","https://maps.google.com/?q=Otaru+Canal"],["Hora Tengujama","天狗山","Noční výhled na záliv lanovkou.",""]]},
+   {cat:"nature",items:[["Cape Kamui","神威岬","Útesová stezka k majáku (~50–60 min). Šakotanská modř. Větrno.","https://maps.google.com/?q=Cape+Kamui+Shakotan"]]},
+   {cat:"food",items:[["Suši v přístavu Otaru","","Čerstvé, slavné.",""],["Uni v Šakotanu","","Sezona ježka končí ~koncem září.",""]]}]},
+ {n:5,d:"Den 7–8",loc:"Wakkanai → Cape Sójá",jp:"宗谷岬",cat:"view",lat:45.5229,lng:141.9365,
+  tag:"Nejsevernější bod Japonska · drsná krása severu",blurb:"Nejsevernější bod Japonska. Za jasna Sachalin přes moře, větrné mlýny.",
+  groups:[
+   {cat:"view",items:[["Cape Sójá","宗谷岬","Nejsevernější bod Japonska. Monument, větrné mlýny, za jasna Rusko.","https://maps.google.com/?q=Cape+Soya"],["Vyhlídka naproti","","Sochy a památníky, ainuská historie.",""]]},
+   {cat:"food",items:[["Mořské plody dálného severu","","Hřebenatky, krab — rybářský přístav.",""],["Sanma (saury)","秋刀魚","V září nejtučnější, grilovaná.",""]]}]},
+ {n:6,d:"Den 9–10",loc:"Asahikawa → Asahidake",jp:"旭岳",cat:"nature",lat:43.6577,lng:142.8125,
+  tag:"★ Střed · první podzimní barvy v celém Japonsku ★",blurb:"Nejvyšší hora ostrova a úplně první kórjó v Japonsku — v polovině září barvy proti prvnímu sněhu.",
+  groups:[
+   {cat:"nature",items:[["Lanovka Asahidake → Sugatami","旭岳ロープウェイ","10 min nahoru (1600 m), ~1 h okruh kolem rybníka. V polovině září barvy + sníh.","https://maps.google.com/?q=Asahidake+Ropeway"],["Vodopády Ginga & Rjúsei","銀河・流星の滝","Voda proti listí u Sounkjó.",""]]},
+   {cat:"culture",items:[["ZOO Asahijama","旭山動物園","Jedna z nejlepších v Japonsku.","https://maps.google.com/?q=Asahiyama+Zoo"]]},
+   {cat:"onsen",items:[["Onsen Sounkjó / Asahidake","層雲峡温泉","Horké prameny v barevné soutěsce.",""]]},
+   {cat:"food",items:[["Asahikawa ramen (šóju)","","Sójová varianta, dvojitý vývar.",""]],note:"Lanovka 9:00–17:00. Nahoře chladno — teplé vrstvy. Měj rezervní den na počasí."}]},
+ {n:7,d:"Den 11",loc:"Furano / Biei",jp:"富良野・美瑛",cat:"nature",lat:43.4934,lng:142.6142,
+  tag:"Kopcovitá krajina · po levandulové sezoně, klid",blurb:"Modré jezero, zlaté lány a patchworková políčka. Méně lidí než v létě.",
+  groups:[
+   {cat:"nature",items:[["Modré jezero (Aoike)","青い池","Tyrkysová voda, vodopády Širahige.","https://maps.google.com/?q=Shirogane+Blue+Pond"],["Šikisai no Oka","四季彩の丘","Zlaté lány, Patchwork Road, Tomita Farm.","https://maps.google.com/?q=Shikisai+no+Oka"]]},
+   {cat:"food",items:[["Furano sýr & mléko","","Sýrárna, máselná dílna, zmrzlina.",""],["Furano omurice / curry","","Lokální specialita.",""]]}]},
+ {n:8,d:"Den 12–13",loc:"Abaširi",jp:"網走",cat:"city",lat:43.9952,lng:144.2299,
+  tag:"Východ · Ochotské moře · korálová tráva",blurb:"Korálová tráva rudne koncem září, vězeňské muzeum, syrové severní světlo.",
+  groups:[
+   {cat:"nature",items:[["Korálová tráva u jezera Notoro","サンゴ草","Koncem září červený koberec. Jen východní Hokkaidó.",""]]},
+   {cat:"culture",items:[["Vězeňské muzeum Abaširi","網走監獄","Historie kolonizace nucenými pracemi. 2–3 h.","https://maps.google.com/?q=Abashiri+Prison+Museum"]]},
+   {cat:"view",items:[["Mys Puyuni za soumraku","","Ploché severní světlo nad mořem.",""]]},
+   {cat:"food",items:[["Mořské plody Ochotského moře","","Losos, hřebenatky, krab.",""]]}]},
+ {n:9,d:"Den 14–15",loc:"Poloostrov Širetoko",jp:"知床",cat:"nature",lat:44.1239,lng:145.0828,
+  tag:"UNESCO · poslední divočina · ráj pro turistiku",blurb:"Pět jezer v pralese, vodopád ke koupání, lodní výlet za medvědy. V září se třou lososi.",
+  groups:[
+   {cat:"nature",items:[["Jezera Širetoko Goko","知床五湖","Chodníčky mezi pěti jezery, hladina zrcadlí hory.","https://maps.google.com/?q=Shiretoko+Five+Lakes"],["Vodopády Kamuiwakka","カムイワッカ","Vodopád ke koupání (teplý geotermální).",""],["Lodní výlet za medvědy","","Medvědi z lodi. V září se třou lososi — chodí k vodě.",""]]},
+   {cat:"view",items:[["Sunset Terrace / Puyuni","","Západ nad Pacifikem.",""],["Širetokský průsmyk","知床峠","Panorama poloostrova.",""]]},
+   {cat:"food",items:[["Ryokan večeře v Utoro","","Mořské plody. Rezervuj brzy — málo míst.",""]]}]},
+ {n:10,d:"Den 16",loc:"Akan-Mašú",jp:"阿寒・摩周",cat:"nature",lat:43.5872,lng:144.5237,
+  tag:"Jezerní oblast · barvy začínají · ainuská kultura",blurb:"Kráterová modř Mašú, onseny u Kussara, ainuská vesnice s tancem.",
+  groups:[
+   {cat:"nature",items:[["Jezero Mašú","摩周湖","Kráterová modř, ráno mlha (unkai).","https://maps.google.com/?q=Lake+Mashu"],["Jezero Kussaro","屈斜路湖","Onseny u břehu, namočíš nohy. Labutě.","https://maps.google.com/?q=Lake+Kussharo"]]},
+   {cat:"culture",items:[["Ainuská vesnice Akan Kotan","阿寒湖アイヌコタン","Řemesla, tradiční tanec.","https://maps.google.com/?q=Akanko+Ainu+Kotan"]]},
+   {cat:"food",items:[["Říční ryba & ainuská kuchyně","","U jezera Akan.",""]]}]},
+ {n:11,d:"Den 17–18",loc:"Kuširo → Sapporo",jp:"釧路",cat:"food",lat:43.0739,lng:144.3205,
+  tag:"Mokřady · rodiště robata-jaki · skvělé západy",blurb:"Největší mokřady Japonska, jeřábi, rodiště robata-jaki. Návrat do Sappora.",
+  groups:[
+   {cat:"nature",items:[["Mokřady Kuširo","釧路湿原","Největší v Japonsku. Jeřábi, kánoe, vláček Norokko.","https://maps.google.com/?q=Kushiro+Marsh+Observatory"]]},
+   {cat:"view",items:[["Západ z mostu Nusamai","幣舞橋","Jeden z nejhezčích západů Japonska.",""]]},
+   {cat:"food",items:[["Robata-jaki","炉端焼き","Grilování na uhlí vzniklo v Kuširu.",""],["Katte-don — trh Wašó","和商市場","Vlastní kaisendon, levnější.",""],["Teppan špagety","","Kuširský originál na pánvi.",""]],note:"Cestou Obihiro na butadon — nebo úspora dne letem Kuširo–Sapporo."}]},
+];
+DATA.forEach(d=>d.img=PHOTOS[d.n]);
+
+/* ---------- helpers ---------- */
+const bg=(url,col)=>`background-image:url('${url}'),linear-gradient(135deg,${col},${col}bb)`;
+const reduceMotion=window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+/* ---------- legend ---------- */
+const legendEl=document.getElementById("legend");
+Object.values(CAT).forEach(c=>{
+  const s=document.createElement("span");s.className="lg";
+  s.innerHTML=`<span class="sw" style="background:${c.c}"></span>${c.n}`;
+  legendEl.appendChild(s);
+});
+
+/* ---------- map ---------- */
+const map=L.map("map",{zoomControl:true,scrollWheelZoom:false,minZoom:5,maxZoom:16}).setView([44,143],7);
+map.on("focus",()=>map.scrollWheelZoom.enable());
+map.on("blur",()=>map.scrollWheelZoom.disable());
+L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{attribution:"&copy; OpenStreetMap &copy; CARTO",subdomains:"abcd",maxZoom:19}).addTo(map);
+
+const routePts=DATA.map(d=>[d.lat,d.lng]);
+const baseLine=L.polyline(routePts,{color:"#9c2f1d",weight:2.5,opacity:.35,dashArray:"2,8",lineCap:"round"}).addTo(map);
+const goldLine=L.polyline([],{color:"#c5402a",weight:3.5,opacity:.9,lineCap:"round"}).addTo(map);
+
+function pinHtml(d,state){
+  let col=CAT[d.cat].c;
+  const cls="pin"+(state==="cur"?" cur":"")+(state==="dim"?" dim":"");
+  if(state==="cur")col="#c5402a";
+  return `<div class="${cls}"><svg width="32" height="40" viewBox="0 0 34 42"><path d="M17 0C7.6 0 0 7.6 0 17c0 12 17 25 17 25s17-13 17-25C34 7.6 26.4 0 17 0z" fill="${col}" stroke="#fff" stroke-width="2.5"/></svg><span class="lbl">${d.n}</span></div>`;
+}
+function makeIcon(d,state){return L.divIcon({className:"",html:pinHtml(d,state),iconSize:[32,40],iconAnchor:[16,38],popupAnchor:[0,-34]});}
+const markers=DATA.map((d,i)=>{
+  const m=L.marker([d.lat,d.lng],{icon:makeIcon(d,"")}).addTo(map);
+  m.bindPopup(popHtml(d,i),{maxWidth:260,closeButton:true});
+  m.on("click",()=>openDay(i));
+  return m;
+});
+function popHtml(d,i){
+  const cat=CAT[d.cat];
+  return `<div class="pop"><div class="pimg" style="${bg(d.img,cat.c)}"><span class="pcat" style="background:${cat.c}">${cat.i} ${cat.n}</span></div><div class="pbody"><div class="pjp">${d.jp} · ${d.d}</div><h3>${d.loc}</h3><p>${d.blurb}</p><span class="pmore" onclick="openDay(${i},true)">Zobrazit den v itineráři →</span></div></div>`;
+}
+
+/* ---------- day cards ---------- */
+const daysEl=document.getElementById("days");
+DATA.forEach((d,i)=>{
+  const cat=CAT[d.cat];
+  const el=document.createElement("article");
+  el.className="day reveal";el.dataset.i=i;
+  let groups="";
+  d.groups.forEach(g=>{
+    const c=CAT[g.cat];
+    let lis="";
+    g.items.forEach(it=>{
+      const jp=it[1]?` <span class="jpn">${it[1]}</span>`:"";
+      const nm=it[3]?`<a href="${it[3]}" target="_blank" rel="noopener">${it[0]}</a>`:`<b>${it[0]}</b>`;
+      lis+=`<li>${nm}${jp} — ${it[2]}</li>`;
+    });
+    groups+=`<div class="grp ${g.cat}"><div class="glabel">${c.i} ${c.n}</div><ul>${lis}</ul>${g.note?`<div class="note">${g.note}</div>`:""}</div>`;
+  });
+  el.innerHTML=`
+    <div class="num">${String(i+1).padStart(2,"0")} · ${d.d}</div>
+    <div class="toprow"><h3>${d.loc}</h3><span class="jp">${d.jp}</span></div>
+    <div class="tag">${d.tag}</div>
+    <div class="photo" style="${bg(d.img,cat.c)}"><span class="cat" style="background:${cat.c}">${cat.i} ${cat.n}</span></div>
+    <p class="blurb">${d.blurb}</p>
+    <span class="expand-cue"><span class="pl">+</span> <span class="cue-txt">Aktivity, zajímavosti &amp; jídlo</span></span>
+    <div class="body"><div class="body-inner"><div class="groups">${groups}</div></div></div>`;
+  // klik na horní část karty = výběr + toggle
+  el.addEventListener("click",e=>{
+    if(e.target.closest("a"))return; // odkazy nech projít
+    const willOpen=!el.classList.contains("open");
+    openDay(i,false);
+    el.classList.toggle("open",willOpen);
+    el.querySelector(".cue-txt").textContent=willOpen?"Skrýt detail":"Aktivity, zajímavosti & jídlo";
+  });
+  daysEl.appendChild(el);
+});
+const dayEls=[...document.querySelectorAll(".day")];
+
+/* ---------- selection / sync ---------- */
+let current=-1;
+function openDay(i,scrollToCard){
+  current=i;
+  markers.forEach((m,j)=>m.setIcon(makeIcon(DATA[j],j===i?"cur":"dim")));
+  goldLine.setLatLngs(routePts.slice(0,i+1));
+  map.flyTo([DATA[i].lat,DATA[i].lng], (i===0||i===10)?8:9, {duration:reduceMotion?0:.8});
+  markers[i].openPopup();
+  if(scrollToCard){
+    const card=dayEls[i];
+    if(card){
+      dayEls.forEach((e,j)=>{e.classList.toggle("open",j===i);const t=e.querySelector(".cue-txt");if(t)t.textContent=j===i?"Skrýt detail":"Aktivity, zajímavosti & jídlo";});
+      card.scrollIntoView({behavior:reduceMotion?"auto":"smooth",block:"center"});
+    }
+  }
+}
+window.openDay=openDay;
+
+/* ---------- play route ---------- */
+let playing=false,timer=null;
+const prog=document.getElementById("prog"),pfill=document.getElementById("pfill"),progtxt=document.getElementById("progtxt"),playBtn=document.getElementById("play");
+playBtn.addEventListener("click",()=>{
+  if(playing){stopPlay();return;}
+  playing=true;playBtn.textContent="⏸ Pauza";prog.classList.add("show");
+  let i=0;
+  const step=()=>{
+    if(i>=DATA.length){stopPlay();map.flyToBounds(baseLine.getBounds(),{padding:[40,40],duration:reduceMotion?0:1});return;}
+    openDay(i,false);
+    progtxt.textContent=DATA[i].d+" · "+DATA[i].loc;
+    pfill.style.width=((i+1)/DATA.length*100)+"%";
+    i++;timer=setTimeout(step,reduceMotion?900:2600);
+  };
+  step();
+});
+function stopPlay(){playing=false;clearTimeout(timer);playBtn.textContent="▶ Přehrát trasu";setTimeout(()=>prog.classList.remove("show"),1400);}
+document.getElementById("reset").addEventListener("click",()=>{
+  stopPlay();current=-1;
+  dayEls.forEach(e=>{e.classList.remove("open");const t=e.querySelector(".cue-txt");if(t)t.textContent="Aktivity, zajímavosti & jídlo";});
+  markers.forEach((m,j)=>m.setIcon(makeIcon(DATA[j],"")));
+  goldLine.setLatLngs([]);map.closePopup();pfill.style.width="0";
+  map.flyToBounds(baseLine.getBounds(),{padding:[40,40],duration:reduceMotion?0:1});
+});
+
+/* ---------- fit + sizing ---------- */
+function fit(){map.invalidateSize();map.fitBounds(baseLine.getBounds(),{padding:[40,40]});}
+map.whenReady(()=>setTimeout(fit,180));
+window.addEventListener("resize",()=>map.invalidateSize());
+
+/* ---------- scroll reveal ---------- */
+if(!reduceMotion && "IntersectionObserver" in window){
+  const io=new IntersectionObserver((ents)=>{
+    ents.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}});
+  },{threshold:.12,rootMargin:"0px 0px -8% 0px"});
+  document.querySelectorAll(".reveal:not(.in)").forEach(el=>io.observe(el));
+}else{
+  document.querySelectorAll(".reveal").forEach(el=>el.classList.add("in"));
+}
+</script>
+</body>
 </html>
